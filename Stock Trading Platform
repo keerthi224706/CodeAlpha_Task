@@ -1,0 +1,419 @@
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.InputMismatchException;
+import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
+import java.io.Serializable; // For future persistence if you expand
+
+public class StockTradingPlatform {
+
+    // --- Stock Class ---
+    // Represents a single stock with its symbol, name, and current price.
+    static class Stock implements Serializable {
+        private String symbol;
+        private String name;
+        private double currentPrice;
+
+        public Stock(String symbol, String name, double currentPrice) {
+            this.symbol = symbol;
+            this.name = name;
+            this.currentPrice = currentPrice;
+        }
+
+        public String getSymbol() { return symbol; }
+        public String getName() { return name; }
+        public double getCurrentPrice() { return currentPrice; }
+
+        public void setCurrentPrice(double currentPrice) {
+            this.currentPrice = Math.max(0.01, currentPrice); // Ensure price doesn't go negative or too low
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%-5s %-15s $%.2f", symbol, name, currentPrice);
+        }
+    }
+
+    // --- UserStockHolding Class ---
+    // Represents a specific stock held by the user, including quantity and average purchase price.
+    static class UserStockHolding implements Serializable {
+        private String stockSymbol;
+        private int quantity;
+        private double purchasePrice; // Average purchase price of all shares held
+
+        public UserStockHolding(String stockSymbol, int quantity, double purchasePrice) {
+            this.stockSymbol = stockSymbol;
+            this.quantity = quantity;
+            this.purchasePrice = purchasePrice;
+        }
+
+        public String getStockSymbol() { return stockSymbol; }
+        public int getQuantity() { return quantity; }
+        public double getPurchasePrice() { return purchasePrice; }
+
+        public void setQuantity(int quantity) { this.quantity = quantity; }
+        public void setPurchasePrice(double purchasePrice) { this.purchasePrice = purchasePrice; }
+
+        @Override
+        public String toString() {
+            return String.format("%-5s Quantity: %-5d Avg. Price: $%.2f", stockSymbol, quantity, purchasePrice);
+        }
+    }
+
+    // --- User Class ---
+    // Represents the trading account, holding balance and portfolio.
+    static class User implements Serializable {
+        private String username;
+        private double balance;
+        private Map<String, UserStockHolding> portfolio; // Maps stock symbol to UserStockHolding
+
+        public User(String username, double initialBalance) {
+            this.username = username;
+            this.balance = initialBalance;
+            this.portfolio = new HashMap<>();
+        }
+
+        public String getUsername() { return username; }
+        public double getBalance() { return balance; }
+        public Map<String, UserStockHolding> getPortfolio() { return portfolio; }
+
+        public void deposit(double amount) {
+            if (amount > 0) {
+                balance += amount;
+            }
+        }
+
+        public boolean withdraw(double amount) {
+            if (amount > 0 && balance >= amount) {
+                balance -= amount;
+                return true;
+            }
+            return false;
+        }
+
+        public void addStockToPortfolio(String symbol, int quantity, double purchasePrice) {
+            portfolio.compute(symbol.toUpperCase(), (key, holding) -> {
+                if (holding == null) { // New holding
+                    return new UserStockHolding(symbol, quantity, purchasePrice);
+                } else { // Existing holding, update quantity and average price
+                    double currentTotalCost = holding.getQuantity() * holding.getPurchasePrice();
+                    double newTotalCost = currentTotalCost + (quantity * purchasePrice);
+                    int newQuantity = holding.getQuantity() + quantity;
+                    holding.setQuantity(newQuantity);
+                    holding.setPurchasePrice(newTotalCost / newQuantity);
+                    return holding;
+                }
+            });
+        }
+
+        public boolean removeStockFromPortfolio(String symbol, int quantity) {
+            UserStockHolding holding = portfolio.get(symbol.toUpperCase());
+            if (holding != null && holding.getQuantity() >= quantity) {
+                if (holding.getQuantity() == quantity) {
+                    portfolio.remove(symbol.toUpperCase()); // Remove entirely if all shares sold
+                } else {
+                    holding.setQuantity(holding.getQuantity() - quantity); // Reduce quantity
+                }
+                return true;
+            }
+            return false; // Not enough shares or holding doesn't exist
+        }
+    }
+
+    // --- MarketDataSimulator Class ---
+    // Simulates real-time stock prices and manages available stocks.
+    static class MarketDataSimulator {
+        private Map<String, Stock> availableStocks;
+        private Random random;
+
+        public MarketDataSimulator() {
+            availableStocks = new HashMap<>();
+            random = new Random();
+            initializeStocks();
+        }
+
+        private void initializeStocks() {
+            availableStocks.put("AAPL", new Stock("AAPL", "Apple Inc.", 190.00));
+            availableStocks.put("GOOG", new Stock("GOOG", "Alphabet Inc.", 170.00));
+            availableStocks.put("MSFT", new Stock("MSFT", "Microsoft Corp.", 420.00));
+            availableStocks.put("AMZN", new Stock("AMZN", "Amazon.com Inc.", 180.00));
+            availableStocks.put("TSLA", new Stock("TSLA", "Tesla Inc.", 185.00));
+            availableStocks.put("NVDA", new Stock("NVDA", "NVIDIA Corp.", 1100.00));
+            availableStocks.put("META", new Stock("META", "Meta Platforms", 480.00));
+        }
+
+        public Map<String, Stock> getAvailableStocks() {
+            return new HashMap<>(availableStocks); // Return a copy for safety
+        }
+
+        public Stock getStock(String symbol) {
+            return availableStocks.get(symbol.toUpperCase());
+        }
+
+        public void simulatePriceChanges() {
+            System.out.println("\n--- Simulating Market Price Changes ---");
+            for (Stock stock : availableStocks.values()) {
+                double currentPrice = stock.getCurrentPrice();
+                // Generate a random change between -2% and +2% of current price
+                double percentageChange = (random.nextDouble() * 0.04) - 0.02; // Range [-0.02, 0.02]
+                double newPrice = currentPrice * (1 + percentageChange);
+                stock.setCurrentPrice(newPrice);
+                System.out.printf("%-5s new price: $%.2f%n", stock.getSymbol(), newPrice);
+            }
+            System.out.println("---------------------------------------");
+        }
+
+        public void displayMarketData() {
+            System.out.println("\n--- Current Market Data ---");
+            System.out.println("Symbol | Company Name    | Price");
+            System.out.println("---------------------------------");
+            availableStocks.values().forEach(System.out::println);
+            System.out.println("---------------------------------");
+        }
+    }
+
+    // --- TradingPlatform (Main Application Logic) ---
+    private User currentUser;
+    private MarketDataSimulator marketData;
+    private Scanner scanner;
+    private final double TRANSACTION_FEE_RATE = 0.002; // 0.2% fee on transactions
+
+    public StockTradingPlatform() {
+        // For this console app, we'll start with a default user and initial balance
+        this.currentUser = new User("TraderJoe", 10000.00);
+        this.marketData = new MarketDataSimulator();
+        this.scanner = new Scanner(System.in);
+    }
+
+    public void start() {
+        System.out.println("Welcome to the Simulated Stock Trading Platform!");
+        System.out.println("Logged in as: " + currentUser.getUsername());
+        System.out.printf("Starting Balance: $%.2f%n", currentUser.getBalance());
+
+        int choice;
+        do {
+            displayMenu();
+            choice = getUserChoice();
+
+            switch (choice) {
+                case 1:
+                    marketData.displayMarketData();
+                    break;
+                case 2:
+                    simulateMarketFluctuations();
+                    break;
+                case 3:
+                    buyStock();
+                    break;
+                case 4:
+                    sellStock();
+                    break;
+                case 5:
+                    displayPortfolio();
+                    break;
+                case 0:
+                    System.out.println("Thank you for trading! Goodbye.");
+                    break;
+                default:
+                    System.out.println("Oops! Invalid choice. Please try again.");
+            }
+            System.out.println(); // Add a newline for better readability
+        } while (choice != 0);
+
+        scanner.close();
+    }
+
+    private void displayMenu() {
+        System.out.println("\n--- Main Menu ---");
+        System.out.println("1. View Current Market Data");
+        System.out.println("2. Simulate Market Fluctuation (Update Prices)");
+        System.out.println("3. Buy Stocks");
+        System.out.println("4. Sell Stocks");
+        System.out.println("5. View Your Portfolio");
+        System.out.println("0. Exit Platform");
+        System.out.print("Enter your choice: ");
+    }
+
+    private int getUserChoice() {
+        try {
+            return scanner.nextInt();
+        } catch (InputMismatchException e) {
+            System.out.println("That's not a number! Please enter a valid menu option.");
+            scanner.next(); // Consume the invalid input
+            return -1; // Return an invalid choice to loop again
+        } finally {
+            scanner.nextLine(); // Consume the leftover newline character
+        }
+    }
+
+    private void simulateMarketFluctuations() {
+        marketData.simulatePriceChanges();
+    }
+
+    private void buyStock() {
+        marketData.displayMarketData(); // Show market to help user choose
+        System.out.print("Enter stock symbol to buy (e.g., AAPL): ");
+        String symbol = scanner.nextLine().toUpperCase();
+        Stock stock = marketData.getStock(symbol);
+
+        if (stock == null) {
+            System.out.println("Error: Stock symbol '" + symbol + "' not found. Check the symbol and try again.");
+            return;
+        }
+
+        System.out.print("Enter quantity to buy: ");
+        int quantity;
+        try {
+            quantity = scanner.nextInt();
+            if (quantity <= 0) {
+                System.out.println("Error: Quantity must be a positive number.");
+                return;
+            }
+        } catch (InputMismatchException e) {
+            System.out.println("Invalid input. Please enter a whole number for quantity.");
+            scanner.next();
+            return;
+        } finally {
+            scanner.nextLine();
+        }
+
+        double transactionCost = stock.getCurrentPrice() * quantity;
+        double fee = transactionCost * TRANSACTION_FEE_RATE;
+        double totalCost = transactionCost + fee;
+
+        System.out.printf("--- Buy Order Details ---%n");
+        System.out.printf("Stock: %s (Current Price: $%.2f)%n", stock.getName(), stock.getCurrentPrice());
+        System.out.printf("Quantity: %d%n", quantity);
+        System.out.printf("Subtotal: $%.2f%n", transactionCost);
+        System.out.printf("Transaction Fee (%.1f%%): $%.2f%n", TRANSACTION_FEE_RATE * 100, fee);
+        System.out.printf("Total Cost: $%.2f%n", totalCost);
+        System.out.printf("Your Current Balance: $%.2f%n", currentUser.getBalance());
+
+        if (currentUser.getBalance() >= totalCost) {
+            currentUser.withdraw(totalCost);
+            currentUser.addStockToPortfolio(symbol, quantity, stock.getCurrentPrice());
+            System.out.println("Success! You've bought " + quantity + " shares of " + symbol + ".");
+            System.out.printf("New balance: $%.2f%n", currentUser.getBalance());
+        } else {
+            System.out.println("Transaction Failed: Insufficient balance. You need $%.2f more.%n", totalCost - currentUser.getBalance());
+        }
+    }
+
+    private void sellStock() {
+        displayPortfolio(); // Show portfolio to help user choose
+        if (currentUser.getPortfolio().isEmpty()) {
+            System.out.println("Your portfolio is empty. Nothing to sell!");
+            return;
+        }
+
+        System.out.print("Enter stock symbol to sell (e.g., AAPL): ");
+        String symbol = scanner.nextLine().toUpperCase();
+        Stock stock = marketData.getStock(symbol); // Get current market price
+
+        if (stock == null) {
+            System.out.println("Error: Stock symbol '" + symbol + "' not found in market data. Cannot determine current selling price.");
+            return;
+        }
+
+        UserStockHolding holding = currentUser.getPortfolio().get(symbol);
+        if (holding == null) {
+            System.out.println("Error: You do not own any shares of " + symbol + ".");
+            return;
+        }
+
+        System.out.print("Enter quantity to sell (you own " + holding.getQuantity() + "): ");
+        int quantity;
+        try {
+            quantity = scanner.nextInt();
+            if (quantity <= 0) {
+                System.out.println("Error: Quantity must be a positive number.");
+                return;
+            }
+        } catch (InputMismatchException e) {
+            System.out.println("Invalid input. Please enter a whole number for quantity.");
+            scanner.next();
+            return;
+        } finally {
+            scanner.nextLine();
+        }
+
+        if (quantity > holding.getQuantity()) {
+            System.out.println("Error: You only own " + holding.getQuantity() + " shares of " + symbol + ". You cannot sell more than you own.");
+            return;
+        }
+
+        double salesProceeds = stock.getCurrentPrice() * quantity;
+        double fee = salesProceeds * TRANSACTION_FEE_RATE;
+        double netProceeds = salesProceeds - fee;
+
+        System.out.printf("--- Sell Order Details ---%n");
+        System.out.printf("Stock: %s (Current Price: $%.2f)%n", stock.getName(), stock.getCurrentPrice());
+        System.out.printf("Quantity: %d%n", quantity);
+        System.out.printf("Subtotal: $%.2f%n", salesProceeds);
+        System.out.printf("Transaction Fee (%.1f%%): $%.2f%n", TRANSACTION_FEE_RATE * 100, fee);
+        System.out.printf("Net Proceeds: $%.2f%n", netProceeds);
+        System.out.printf("Your Current Balance: $%.2f%n", currentUser.getBalance());
+
+        if (currentUser.removeStockFromPortfolio(symbol, quantity)) {
+            currentUser.deposit(netProceeds);
+            System.out.println("Success! You've sold " + quantity + " shares of " + symbol + ".");
+            System.out.printf("New balance: $%.2f%n", currentUser.getBalance());
+        } else {
+            System.out.println("Transaction Failed: Could not sell shares (internal error or not enough shares).");
+        }
+    }
+
+    private void displayPortfolio() {
+        System.out.println("\n--- Your Portfolio ---");
+        System.out.printf("Current Cash Balance: $%.2f%n", currentUser.getBalance());
+        System.out.println("----------------------------------------------------------------------------------");
+        System.out.println("Symbol | Quantity | Avg. Buy Price | Current Market Price | P/L ($)   | P/L (%)   ");
+        System.out.println("----------------------------------------------------------------------------------");
+
+        if (currentUser.getPortfolio().isEmpty()) {
+            System.out.println("Your portfolio is currently empty. Buy some stocks!");
+        } else {
+            double totalPortfolioCurrentValue = 0;
+            double totalPortfolioInitialCost = 0;
+
+            for (UserStockHolding holding : currentUser.getPortfolio().values()) {
+                Stock marketStock = marketData.getStock(holding.getStockSymbol());
+                if (marketStock != null) {
+                    double currentPrice = marketStock.getCurrentPrice();
+                    double initialCostOfHolding = holding.getQuantity() * holding.getPurchasePrice();
+                    double currentValue = holding.getQuantity() * currentPrice;
+                    double profitLoss = currentValue - initialCostOfHolding;
+                    double profitLossPercentage = (initialCostOfHolding == 0) ? 0 : (profitLoss / initialCostOfHolding * 100);
+
+                    System.out.printf("%-6s | %-8d | $%-14.2f | $%-20.2f | %+-9.2f | %+-8.2f%%%n",
+                            holding.getStockSymbol(),
+                            holding.getQuantity(),
+                            holding.getPurchasePrice(),
+                            currentPrice,
+                            profitLoss,
+                            profitLossPercentage);
+
+                    totalPortfolioCurrentValue += currentValue;
+                    totalPortfolioInitialCost += initialCostOfHolding;
+
+                } else {
+                    System.out.printf("%-6s | %-8d | $%-14.2f | N/A (Market Data Missing) | N/A       | N/A       %n",
+                            holding.getStockSymbol(), holding.getQuantity(), holding.getPurchasePrice());
+                }
+            }
+            System.out.println("----------------------------------------------------------------------------------");
+            double overallProfitLoss = totalPortfolioCurrentValue - totalPortfolioInitialCost;
+            double overallProfitLossPercentage = (totalPortfolioInitialCost == 0) ? 0 : (overallProfitLoss / totalPortfolioInitialCost * 100);
+
+            System.out.printf("Total Portfolio Current Value: $%.2f%n", totalPortfolioCurrentValue);
+            System.out.printf("Overall Portfolio P/L: $%.2f (%.2f%%)%n", overallProfitLoss, overallProfitLossPercentage);
+        }
+        System.out.println("----------------------------------------------------------------------------------");
+    }
+
+    public static void main(String[] args) {
+        StockTradingPlatform platform = new StockTradingPlatform();
+        platform.start();
+    }
+}
