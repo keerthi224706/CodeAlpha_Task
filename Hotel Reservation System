@@ -1,0 +1,122 @@
+import java.util.*;
+
+class Room {
+    int number;
+    String category;
+    double price;
+    boolean isBooked;
+
+    Room(int number, String category, double price) {
+        this.number = number;
+        this.category = category;
+        this.price = price;
+        this.isBooked = false;
+    }
+}
+
+class Booking {
+    String customerName;
+    Room room;
+
+    Booking(String customerName, Room room) {
+        this.customerName = customerName;
+        this.room = room;
+    }
+}
+
+class Hotel {
+    List<Room> rooms = new ArrayList<>();
+    List<Booking> bookings = new ArrayList<>();
+
+    void addRoom(Room room) {
+        rooms.add(room);
+    }
+
+    List<Room> searchAvailableRooms(String category) {
+        List<Room> available = new ArrayList<>();
+        for (Room room : rooms) {
+            if (room.category.equalsIgnoreCase(category) && !room.isBooked) {
+                available.add(room);
+            }
+        }
+        return available;
+    }
+
+    String bookRoom(String name, String category) {
+        for (Room room : searchAvailableRooms(category)) {
+            room.isBooked = true;
+            bookings.add(new Booking(name, room));
+            return "Room " + room.number + " booked for " + name + " (₹" + room.price + ")";
+        }
+        return "No " + category + " rooms available.";
+    }
+
+    void viewBookings() {
+        if (bookings.isEmpty()) {
+            System.out.println("No bookings yet.");
+        } else {
+            for (Booking booking : bookings) {
+                System.out.println(booking.customerName + " booked Room " + booking.room.number + " (" + booking.room.category + ")");
+            }
+        }
+    }
+}
+
+public class HotelReservationSystem {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        Hotel hotel = new Hotel();
+
+        // Add sample rooms
+        hotel.addRoom(new Room(101, "Single", 1000));
+        hotel.addRoom(new Room(102, "Double", 1500));
+        hotel.addRoom(new Room(201, "Suite", 3000));
+
+        while (true) {
+            System.out.println("\n--- HOTEL MENU ---");
+            System.out.println("1. Search Available Rooms");
+            System.out.println("2. Book a Room");
+            System.out.println("3. View Bookings");
+            System.out.println("4. Exit");
+            System.out.print("Choose an option: ");
+            int choice = sc.nextInt();
+            sc.nextLine(); // consume newline
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter room category (Single/Double/Suite): ");
+                    String category = sc.nextLine();
+                    List<Room> available = hotel.searchAvailableRooms(category);
+                    if (available.isEmpty()) {
+                        System.out.println("No rooms available in this category.");
+                    } else {
+                        for (Room room : available) {
+                            System.out.println("Room " + room.number + " - ₹" + room.price);
+                        }
+                    }
+                    break;
+
+                case 2:
+                    System.out.print("Enter your name: ");
+                    String name = sc.nextLine();
+                    System.out.print("Enter room category to book: ");
+                    String bookCategory = sc.nextLine();
+                    System.out.println(hotel.bookRoom(name, bookCategory));
+                    break;
+
+                case 3:
+                    hotel.viewBookings();
+                    break;
+
+                case 4:
+                    System.out.println("Thank you! Visit again.");
+                    sc.close();
+                    return;
+
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+}
+
