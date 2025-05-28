@@ -1,0 +1,45 @@
+import java.util.*;
+
+public class ChatBotAI {
+    static Scanner scanner = new Scanner(System.in);
+    
+    // Predefined responses mapped to keywords
+    static Map<String, List<String>> responses = new HashMap<>();
+
+    public static void main(String[] args) {
+        System.out.println("🤖 Hello! I'm your AI Chatbot. Type 'quit' to exit.");
+
+        // Step 1: Add intents (patterns & responses)
+        responses.put("hi", Arrays.asList("Hi there!", "Hello!", "Hey! How can I help you?"));
+        responses.put("hello", Arrays.asList("Hello!", "Hi!", "Greetings!"));
+        responses.put("how are you", Arrays.asList("I'm just a bunch of code, but I'm doing great!", "All good here!", "Fantastic!"));
+        responses.put("what is your name", Arrays.asList("I'm an AI Chatbot built in Java!", "Call me JavaBot!"));
+        responses.put("thanks", Arrays.asList("You're welcome!", "Glad I could help!", "No problem!"));
+        responses.put("bye", Arrays.asList("Goodbye!", "See you later!", "Take care!"));
+
+        // Step 2: Chat loop
+        while (true) {
+            System.out.print("You: ");
+            String input = scanner.nextLine().toLowerCase();
+
+            if (input.equals("quit")) {
+                System.out.println("Bot: Goodbye! 👋");
+                break;
+            }
+
+            String response = getResponse(input);
+            System.out.println("Bot: " + response);
+        }
+    }
+
+    // Step 3: Match input with patterns
+    public static String getResponse(String input) {
+        for (String key : responses.keySet()) {
+            if (input.contains(key)) {
+                List<String> possibleResponses = responses.get(key);
+                return possibleResponses.get(new Random().nextInt(possibleResponses.size()));
+            }
+        }
+        return "Sorry, I didn't understand that.";
+    }
+}
