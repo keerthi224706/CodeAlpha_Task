@@ -1,0 +1,115 @@
+import java.util.ArrayList;
+import java.util.InputMismatchException;
+import java.util.Scanner;
+
+public class StudentGradeTracker {
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        ArrayList<Student> students = new ArrayList<>();
+
+        System.out.println("--- Student Grade Tracker ---");
+
+        // Loop to enter student data
+        while (true) {
+            System.out.print("\nEnter student name (or type 'done' to finish): ");
+            String name = scanner.nextLine();
+
+            if (name.equalsIgnoreCase("done")) {
+                break;
+            }
+
+            double grade = -1;
+            while (grade < 0 || grade > 100) {
+                try {
+                    System.out.print("Enter grade for " + name + " (0-100): ");
+                    grade = scanner.nextDouble();
+                    if (grade < 0 || grade > 100) {
+                        System.out.println("Invalid grade. Please enter a value between 0 and 100.");
+                    }
+                } catch (InputMismatchException e) {
+                    System.out.println("Invalid input. Please enter a numeric grade.");
+                    scanner.next(); // Consume the invalid input
+                }
+            }
+            scanner.nextLine(); // Consume the leftover newline character
+
+            students.add(new Student(name, grade));
+        }
+
+        // Process and display results if students data is available
+        if (students.isEmpty()) {
+            System.out.println("\nNo student data entered. Exiting program.");
+        } else {
+            displayGradeSummary(students);
+        }
+
+        scanner.close();
+    }
+
+    /**
+     * Calculates and displays the average, highest, and lowest grades.
+     * @param students The ArrayList of Student objects.
+     */
+    public static void displayGradeSummary(ArrayList<Student> students) {
+        if (students.isEmpty()) {
+            return; // Nothing to display
+        }
+
+        double totalGrades = 0;
+        double highestGrade = -1;
+        double lowestGrade = 101; // Initialize with a value higher than any possible grade
+        String highestScorer = "";
+        String lowestScorer = "";
+
+        System.out.println("\n--- Grade Summary ---");
+        System.out.println("---------------------");
+
+        for (Student student : students) {
+            System.out.println(student.getName() + ": " + String.format("%.2f", student.getGrade()));
+            totalGrades += student.getGrade();
+
+            if (student.getGrade() > highestGrade) {
+                highestGrade = student.getGrade();
+                highestScorer = student.getName();
+            }
+
+            if (student.getGrade() < lowestGrade) {
+                lowestGrade = student.getGrade();
+                lowestScorer = student.getName();
+            }
+        }
+
+        double averageGrade = totalGrades / students.size();
+
+        System.out.println("---------------------");
+        System.out.println("Average Grade: " + String.format("%.2f", averageGrade));
+        System.out.println("Highest Grade: " + String.format("%.2f", highestGrade) + " (" + highestScorer + ")");
+        System.out.println("Lowest Grade: " + String.format("%.2f", lowestGrade) + " (" + lowestScorer + ")");
+        System.out.println("Total Students: " + students.size());
+        System.out.println("---------------------");
+    }
+}
+
+/**
+ * A simple class to represent a student with a name and a grade.
+ */
+class Student {
+    private String name;
+    private double grade;
+
+    public Student(String name, double grade) {
+        this.name = name;
+        this.grade = grade;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public double getGrade() {
+        return grade;
+    }
+
+    // You could add setters if you wanted to modify grades later, but not needed for this program.
+}
